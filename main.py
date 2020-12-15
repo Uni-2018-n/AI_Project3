@@ -45,7 +45,9 @@ def main():
         ctr_array[first_var][second_var] = (temp[2], k_var)
     ctr_file.close()
 
-    print(var_array)
+
+    test = CSP(var_array, domains_array, None, f)
+
     return
 
 def f(A, a, B, b):
