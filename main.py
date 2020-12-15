@@ -3,7 +3,7 @@ def main():
     dom_path= "rlfap/dom2-f24.txt"
     ctr_path= "rlfap/ctr2-f24.txt"
     var_file = open(var_path, 'r')
-    var_array = {}
+    var_array = dict()
     pl = int(var_file.readline())
     for i in range(0, pl):
         temp = var_file.readline()
@@ -24,13 +24,12 @@ def main():
 
         variable_temp = int(variable_temp)
         dom_temp = int(dom_temp)
-        # var_array.append((variable_temp, dom_temp))
         var_array[variable_temp] = dom_temp
     var_file.close()
 
 
     dom_file = open(dom_path, 'r')
-    dom_array = {}
+    dom_array = dict()
     pl = int(dom_file.readline())
     for i in range(0, pl):
         temp = dom_file.readline()
@@ -62,17 +61,56 @@ def main():
                     num_temp += temp[k]
                 k += 1
 
-            print(k)
-            print("added: ", num_temp)
             num_list.append(int(num_temp))
 
         dom_array[id_temp] = num_list
     dom_file.close()
+
+
+
+    ctr_file = open(ctr_path, 'r')
+    pl = int(ctr_file.readline())
+    ctr_array = dict()
+    for i in range(0, pl):
+        temp = ctr_file.readline()
+        k=0
+        first_var = ''
+        while True:
+            if temp[k] == ' ':
+                k += 1
+                break
+            else:
+                first_var += temp[k]
+            k += 1
+
+        second_var = ''
+        while True:
+            if temp[k] == ' ':
+                k += 1
+                break
+            else:
+                second_var += temp[k]
+            k += 1
+
+        op = temp[k]
+        k += 1
+
+        k_var = ''
+        while True:
+            if temp[k] == '\n':
+                break
+            else:
+                k_var += temp[k]
+            k += 1
+
+        first_var = int(first_var)
+        second_var = int(second_var)
+        k_var = int(k_var)
+
+        ctr_array[first_var] = dict()
+        ctr_array[first_var][second_var] = (op, k_var)
+    ctr_file.close()
     return
-
-
-
-
 
 
 
