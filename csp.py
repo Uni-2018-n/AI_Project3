@@ -8,7 +8,7 @@ from collections import defaultdict, Counter
 from functools import reduce
 from operator import eq, neg
 
-from sortedcontainers import SortedSet
+# from sortedcontainers import SortedSet
 
 import search
 from utils import argmin_random_tie, count, first, extend
@@ -169,7 +169,7 @@ def dom_j_up(csp, queue):
     return SortedSet(queue, key=lambda t: neg(len(csp.curr_domains[t[1]])))
 
 
-def AC3(csp, queue=None, removals=None, arc_heuristic=dom_j_up):
+def AC3(csp, queue=None, removals=None, arc_heuristic=no_arc_heuristic):
     """[Figure 6.3]"""
     if queue is None:
         queue = {(Xi, Xk) for Xi in csp.variables for Xk in csp.neighbors[Xi]}
