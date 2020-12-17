@@ -407,6 +407,7 @@ def backtracking_search(csp, select_unassigned_variable=first_unassigned_variabl
     """[Figure 6.5]"""
 
     def backtrack(assignment):
+        # print(len(assignment))
         if len(assignment) == len(csp.variables):
             return assignment
         var = select_unassigned_variable(assignment, csp)

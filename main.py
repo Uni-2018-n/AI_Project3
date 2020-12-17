@@ -4,6 +4,7 @@ ctr_array = dict()
 
 def main():
     ends = ["11.txt", "2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "8-f10.txt", "8-f11.txt", "14-f27.txt", "14-f28.txt", "6-w2.txt", "7-w1-f4.txt"]
+    # ends = ["2-f24.txt"]
     for end in ends:
         var_path= "rlfap/var" + end
         dom_path= "rlfap/dom" + end
@@ -11,9 +12,77 @@ def main():
 
 
         test = Rlfap(var_path, dom_path, ctr_path)
-        print(end, ": ", csp.mac(test, test.var_array[0], None, None, None))
-        # print(end, ": ", csp.min_conflicts(test))
+        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, inference=mac)
+        print(end, ": ", temp is not None)
+        # temp = csp.backtracking_search(test, select_unassigned_variable=csp.mrv, inference=mac)
+        # print(end, ": ", temp is not None)
+
+
+        # print(temp)
     return
+
+def dom_wdeg(assignment, rlfap):
+    queue = [v for v in rlfap.variables if v not in assignment]
+
+    sum = 1
+    temp = False
+    neighbors = rlfap.neighbors[queue[0]]
+    for neighbor in neighbors:
+        if neighbor not in assignment:
+            temp = True
+        sum += rlfap.weight[queue[0]][neighbor]
+    if not temp:
+        sum = 1
+
+    return csp.first(csp.SortedSet(queue, key=lambda var: csp.num_legal_values(rlfap, var,assignment)/sum))
+
+
+def AC3(rlfap, assignment, queue=None, removals=None, arc_heuristic=csp.dom_j_up):
+    """[Figure 6.3]"""
+    if queue is None:
+        queue = {(Xi, Xk) for Xi in rlfap.variables for Xk in rlfap.neighbors[Xi]}
+    rlfap.support_pruning()
+    queue = arc_heuristic(rlfap, queue)
+    checks = 0
+    while queue:
+        (Xi, Xj) = queue.pop()
+        revised, checks = revise(rlfap, Xi, Xj, removals, checks)
+        if revised:
+            if not rlfap.curr_domains[Xi]:
+                return False, checks  # rlfap is inconsistent
+            for Xk in rlfap.neighbors[Xi]:
+                if Xk != Xj:
+                    queue.add((Xk, Xi))
+    return True, checks  # CSP is satisfiable
+
+
+def revise(rlfap, Xi, Xj, removals, checks=0):
+    """Return true if we remove a value."""
+    revised = False
+    for x in rlfap.curr_domains[Xi][:]:
+        conflict = True
+        for y in rlfap.curr_domains[Xj]:
+            if rlfap.constraints(Xi, x, Xj, y):
+                conflict = False
+            checks += 1
+            if not conflict:
+                break
+        if conflict:
+            rlfap.prune(Xi, x, removals)
+            revised = True
+
+    if len(rlfap.curr_domains[Xi][:]) ==0:
+        rlfap.weight[Xi][Xj] += 1
+
+
+    return revised, checks
+
+
+def mac(rlfap, var, value, assignment, removals, constraint_propagation= AC3):
+    """Maintain arc consistency."""
+    return constraint_propagation(rlfap, assignment, {(X, var) for X in rlfap.neighbors[var]}, removals)
+
+
 
 class Rlfap(csp.CSP):
     def __init__(self, var_path, dom_path, ctr_path):
@@ -70,6 +139,12 @@ class Rlfap(csp.CSP):
                 self.neighbors[second_var] = []
             self.neighbors[second_var].append(first_var)
         ctr_file.close()
+        self.weight = dict()
+        for x in self.var_array:
+            for y in self.neighbors[x]:
+                self.weight.setdefault(x, {})[y] = 0
+
+
         csp.CSP.__init__(self, self.var_array, self.domains_array, self.neighbors, self.f)
         return
 
@@ -83,8 +158,6 @@ class Rlfap(csp.CSP):
             if func == temp[1]:
                 return True
         return False
-
-
 
 
 if __name__ == "__main__":
