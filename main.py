@@ -1,10 +1,11 @@
 import csp
-
+import time
 ctr_array = dict()
 
 def main():
+
     ends = ["11.txt", "2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "8-f10.txt", "8-f11.txt", "14-f27.txt", "14-f28.txt", "6-w2.txt", "7-w1-f4.txt"]
-    # ends = ["2-f24.txt"]
+    ends = ["2-f24.txt"]
     for end in ends:
         var_path= "rlfap/var" + end
         dom_path= "rlfap/dom" + end
@@ -12,8 +13,9 @@ def main():
 
 
         test = Rlfap(var_path, dom_path, ctr_path)
+        start_time = time.time()
         temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, inference=mac)
-        print(end, ": ", temp is not None)
+        print(end, ": ", temp is not None, "%.2f" % (time.time()-start_time))
         # temp = csp.backtracking_search(test, select_unassigned_variable=csp.mrv, inference=mac)
         # print(end, ": ", temp is not None)
 
@@ -22,19 +24,28 @@ def main():
     return
 
 def dom_wdeg(assignment, rlfap):
+    def temp(x):
+        sum =1
+        flag = False
+        for y in rlfap.neighbors[x]:
+            if y not in assignment:
+                flag = True
+            sum += rlfap.weight[x][y]
+
+        if not flag:
+            return float('+Inf')
+
+        if rlfap.curr_domains:
+            fin= len(rlfap.curr_domains[x])
+        else:
+            fin= 1
+        fin = fin/sum
+        # print("TEST: ", fin)
+        return fin
     queue = [v for v in rlfap.variables if v not in assignment]
-
-    sum = 1
-    temp = False
-    neighbors = rlfap.neighbors[queue[0]]
-    for neighbor in neighbors:
-        if neighbor not in assignment:
-            temp = True
-        sum += rlfap.weight[queue[0]][neighbor]
-    if not temp:
-        sum = 1
-
-    return csp.first(csp.SortedSet(queue, key=lambda var: csp.num_legal_values(rlfap, var,assignment)/sum))
+    queue.sort(reverse = False, key = temp)
+    # print(queue)
+    return csp.first(queue)
 
 
 def AC3(rlfap, assignment, queue=None, removals=None, arc_heuristic=csp.dom_j_up):
@@ -70,15 +81,15 @@ def revise(rlfap, Xi, Xj, removals, checks=0):
         if conflict:
             rlfap.prune(Xi, x, removals)
             revised = True
-
-    if len(rlfap.curr_domains[Xi][:]) ==0:
+    if not rlfap.curr_domains[Xi]:
+        # print(rlfap.curr_domains[Xi])
         rlfap.weight[Xi][Xj] += 1
 
 
     return revised, checks
 
 
-def mac(rlfap, var, value, assignment, removals, constraint_propagation= AC3):
+def mac(rlfap, var, value, assignment, removals, constraint_propagation=AC3):
     """Maintain arc consistency."""
     return constraint_propagation(rlfap, assignment, {(X, var) for X in rlfap.neighbors[var]}, removals)
 
@@ -88,14 +99,14 @@ class Rlfap(csp.CSP):
     def __init__(self, var_path, dom_path, ctr_path):
         var_file = open(var_path, 'r')
         pl = int(var_file.readline())
-        self.var_array = []
+        var_array = []
         var_dom_array = dict()
         for i in range(0, pl):
             temp = var_file.readline().split()
 
             variable_temp = int(temp[0])
             dom_temp = int(temp[1])
-            self.var_array.append(variable_temp)
+            var_array.append(variable_temp)
             var_dom_array[variable_temp] = dom_temp
         var_file.close()
 
@@ -114,15 +125,15 @@ class Rlfap(csp.CSP):
         dom_file.close()
 
 
-        self.domains_array = dict()
-        for item in self.var_array:
-            self.domains_array[item] = dom_array[var_dom_array[item]]
+        domains_array = dict()
+        for item in var_array:
+            domains_array[item] = dom_array[var_dom_array[item]]
 
 
         ctr_file = open(ctr_path, 'r')
         pl = int(ctr_file.readline())
         self.ctr_array = dict()
-        self.neighbors = dict()
+        neighbors = dict()
         for i in range(0, pl):
             temp = ctr_file.readline().split()
             first_var = int(temp[0])
@@ -132,24 +143,27 @@ class Rlfap(csp.CSP):
 
             self.ctr_array.setdefault(first_var, {})[second_var] = (temp[2], k_var)
             self.ctr_array.setdefault(second_var, {})[first_var] = (temp[2], k_var)
-            if first_var not in self.neighbors.keys():
-                self.neighbors[first_var] = []
-            self.neighbors[first_var].append(second_var)
-            if second_var not in self.neighbors.keys():
-                self.neighbors[second_var] = []
-            self.neighbors[second_var].append(first_var)
+            if first_var not in neighbors.keys():
+                neighbors[first_var] = []
+            neighbors[first_var].append(second_var)
+            if second_var not in neighbors.keys():
+                neighbors[second_var] = []
+            neighbors[second_var].append(first_var)
         ctr_file.close()
         self.weight = dict()
-        for x in self.var_array:
-            for y in self.neighbors[x]:
+        for x in var_array:
+            for y in neighbors[x]:
                 self.weight.setdefault(x, {})[y] = 0
 
 
-        csp.CSP.__init__(self, self.var_array, self.domains_array, self.neighbors, self.f)
+        csp.CSP.__init__(self, var_array, domains_array, neighbors, self.f)
         return
 
     def f(self, A, a, B, b):
-        func = abs(a-b)
+        if a > b:
+            func = a-b
+        else:
+            func = b-a
         temp = self.ctr_array[A][B]
         if temp[0] == '>':
             if func > temp[1]:
