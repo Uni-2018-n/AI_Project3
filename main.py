@@ -5,7 +5,7 @@ ctr_array = dict()
 def main():
 
     ends = ["11.txt", "2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "8-f10.txt", "8-f11.txt", "14-f27.txt", "14-f28.txt", "6-w2.txt", "7-w1-f4.txt"]
-    ends = ["2-f24.txt"]
+    # ends = ["2-f24.txt"]
     for end in ends:
         var_path= "rlfap/var" + end
         dom_path= "rlfap/dom" + end
@@ -14,7 +14,8 @@ def main():
 
         test = Rlfap(var_path, dom_path, ctr_path)
         start_time = time.time()
-        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, inference=mac)
+        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=mac)
+        # temp = csp.min_conflicts(test)
         print(end, ": ", temp is not None, "%.2f" % (time.time()-start_time))
         # temp = csp.backtracking_search(test, select_unassigned_variable=csp.mrv, inference=mac)
         # print(end, ": ", temp is not None)
@@ -22,6 +23,36 @@ def main():
 
         # print(temp)
     return
+
+def FC_CBJ(rlfap):
+    def main_FC_CBJ(assignment, z, conf_set):
+        def consistent(current):
+            j, a=0
+            old, dell = 0
+            for j in range(current+1, len(rlfap.variables)):
+                for a in range(0, rlfap.curr_domains[j]):
+                    if rlfap.curr_domains[j][a]:
+                        old += 1
+                        rlfap.assign(rlfap.variables[j], rlfap.curr_domains[a], assignment)
+                        if
+
+
+        if z > len(rlfap.variables):
+            return (len(rlfap.variables), assignment)
+
+        rlfap.support_pruning()
+        for i in range(0, len(rlfap.curr_domains[z])):
+            conf_set[i] = []
+            if not rlfap.curr_domains[z][i]:
+                continue
+            rlfap.assign(rlfap.variables[z], rlfap.curr_domains[i], assignment)
+            fail = csp.consistency
+        return
+
+    conf_set = dict()
+    result = main_FC_CBJ({}, 0, conf_set)
+    assert result is None or rlfap.goal_test(result)
+    return result
 
 def dom_wdeg(assignment, rlfap):
     def temp(x):
@@ -40,6 +71,7 @@ def dom_wdeg(assignment, rlfap):
         else:
             fin= 1
         fin = fin/sum
+        # return sum
         # print("TEST: ", fin)
         return fin
     queue = [v for v in rlfap.variables if v not in assignment]
