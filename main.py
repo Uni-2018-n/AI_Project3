@@ -3,9 +3,12 @@ import time
 ctr_array = dict()
 
 def main():
-
-    ends = ["11.txt", "2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "8-f10.txt", "8-f11.txt", "14-f27.txt", "14-f28.txt", "6-w2.txt", "7-w1-f4.txt"]
+    ends = ["2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "6-w2.txt", "7-w1-f4.txt", "7-w1-f5.txt", "8-f10.txt", "8-f11.txt", "11.txt", "14-f27.txt", "14-f28.txt"]
+    # ends = ["3-f10.txt", "11.txt"]
     # ends = ["2-f24.txt"]
+    # ends= ["14-f27.txt"]
+
+    print("FOR MAC:")
     for end in ends:
         var_path= "rlfap/var" + end
         dom_path= "rlfap/dom" + end
@@ -15,14 +18,34 @@ def main():
         test = Rlfap(var_path, dom_path, ctr_path)
         start_time = time.time()
         temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=mac)
-        # temp = csp.min_conflicts(test)
-        print(end, ": ", temp is not None, "%.2f" % (time.time()-start_time))
-        # temp = csp.backtracking_search(test, select_unassigned_variable=csp.mrv, inference=mac)
-        # print(end, ": ", temp is not None)
+        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
+
+    print("FOR FC:")
+    for end in ends:
+        var_path= "rlfap/var" + end
+        dom_path= "rlfap/dom" + end
+        ctr_path= "rlfap/ctr" + end
 
 
-        # print(temp)
+        test = Rlfap(var_path, dom_path, ctr_path)
+        start_time = time.time()
+        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=forward_checking)
+        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
+
+    print("FOR MIN-CONF:")
+    for end in ends:
+        var_path= "rlfap/var" + end
+        dom_path= "rlfap/dom" + end
+        ctr_path= "rlfap/ctr" + end
+
+
+        test = Rlfap(var_path, dom_path, ctr_path)
+        start_time = time.time()
+        temp = csp.min_conflicts(test)
+        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
+
     return
+
 
 def FC_CBJ(rlfap):
     def main_FC_CBJ(assignment, z, conf_set):
@@ -34,7 +57,7 @@ def FC_CBJ(rlfap):
                     if rlfap.curr_domains[j][a]:
                         old += 1
                         rlfap.assign(rlfap.variables[j], rlfap.curr_domains[a], assignment)
-                        if
+                        # if
 
 
         if z > len(rlfap.variables):
@@ -55,30 +78,26 @@ def FC_CBJ(rlfap):
     return result
 
 def dom_wdeg(assignment, rlfap):
-    def temp(x):
-        sum =1
+    queue = [v for v in rlfap.variables if v not in assignment]
+    minimum = float('+Inf')
+    output = queue[0]
+    for x in queue:
         flag = False
+        sum = 1
         for y in rlfap.neighbors[x]:
             if y not in assignment:
                 flag = True
             sum += rlfap.weight[x][y]
-
         if not flag:
-            return float('+Inf')
-
+            sum = float('+Inf')
         if rlfap.curr_domains:
-            fin= len(rlfap.curr_domains[x])
+            sum = len(rlfap.curr_domains[x])/sum
         else:
-            fin= 1
-        fin = fin/sum
-        # return sum
-        # print("TEST: ", fin)
-        return fin
-    queue = [v for v in rlfap.variables if v not in assignment]
-    queue.sort(reverse = False, key = temp)
-    # print(queue)
-    return csp.first(queue)
-
+            sum = csp.count(rlfap.nconflicts(x, val, assignment) == 0 for val in rlfap.domains[x])
+        if sum < minimum:
+            minimum = sum
+            output = x
+    return output
 
 def AC3(rlfap, assignment, queue=None, removals=None, arc_heuristic=csp.dom_j_up):
     """[Figure 6.3]"""
@@ -92,6 +111,7 @@ def AC3(rlfap, assignment, queue=None, removals=None, arc_heuristic=csp.dom_j_up
         revised, checks = revise(rlfap, Xi, Xj, removals, checks)
         if revised:
             if not rlfap.curr_domains[Xi]:
+                rlfap.weight[Xi][Xj] += 1
                 return False, checks  # rlfap is inconsistent
             for Xk in rlfap.neighbors[Xi]:
                 if Xk != Xj:
@@ -113,9 +133,9 @@ def revise(rlfap, Xi, Xj, removals, checks=0):
         if conflict:
             rlfap.prune(Xi, x, removals)
             revised = True
-    if not rlfap.curr_domains[Xi]:
-        # print(rlfap.curr_domains[Xi])
-        rlfap.weight[Xi][Xj] += 1
+    # if not rlfap.curr_domains[Xi]:
+    #     # print(rlfap.curr_domains[Xi])
+    #     rlfap.weight[Xi][Xj] += 1
 
 
     return revised, checks
@@ -124,6 +144,20 @@ def revise(rlfap, Xi, Xj, removals, checks=0):
 def mac(rlfap, var, value, assignment, removals, constraint_propagation=AC3):
     """Maintain arc consistency."""
     return constraint_propagation(rlfap, assignment, {(X, var) for X in rlfap.neighbors[var]}, removals)
+
+
+def forward_checking(rlfap, var, value, assignment, removals):
+    """Prune neighbor values inconsistent with var=value."""
+    rlfap.support_pruning()
+    for B in rlfap.neighbors[var]:
+        if B not in assignment:
+            for b in rlfap.curr_domains[B][:]:
+                if not rlfap.constraints(var, value, B, b):  #seekSupport
+                    rlfap.prune(B, b, removals)
+            if not rlfap.curr_domains[B]:
+                rlfap.weight[B][var] += 1
+                return False
+    return True
 
 
 
