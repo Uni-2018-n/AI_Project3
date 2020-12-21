@@ -1,6 +1,7 @@
 import csp
 import time
-import implementation_fc_cbj as fccbj
+# import implementation_fc_cbj as fccbj
+import try_two_fc_cbj as fccbj
 
 def main():
     ends = ["2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "6-w2.txt", "7-w1-f4.txt", "7-w1-f5.txt", "8-f10.txt", "8-f11.txt", "11.txt", "14-f27.txt", "14-f28.txt"]
@@ -17,25 +18,25 @@ def main():
 
         test = Rlfap(var_path, dom_path, ctr_path)
         start_time = time.time()
-        # temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=mac)
-        test.support_pruning()
-        fccbj.fc_cbj(test, 0)
-        temp = test.assignments
+        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=mac)
+        # test.support_pruning()
+        # fccbj.fc_cbj(test, 0)
+        # temp = test.assignments
         print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
         # print(temp)
 
-    # print("FOR FC:")
-    # for end in ends:
-    #     var_path= "rlfap/var" + end
-    #     dom_path= "rlfap/dom" + end
-    #     ctr_path= "rlfap/ctr" + end
-    #
-    #
-    #     test = Rlfap(var_path, dom_path, ctr_path)
-    #     start_time = time.time()
-    #     temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=forward_checking)
-    #     print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
-    #
+    print("FOR FC:")
+    for end in ends:
+        var_path= "rlfap/var" + end
+        dom_path= "rlfap/dom" + end
+        ctr_path= "rlfap/ctr" + end
+
+
+        test = Rlfap(var_path, dom_path, ctr_path)
+        start_time = time.time()
+        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=forward_checking)
+        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
+
     # print("FOR MIN-CONF:")
     # for end in ends:
     #     var_path= "rlfap/var" + end
@@ -85,6 +86,7 @@ def AC3(rlfap, assignment, queue=None, removals=None, arc_heuristic=csp.dom_j_up
         if revised:
             if not rlfap.curr_domains[Xi]:
                 rlfap.weight[Xi][Xj] += 1
+                rlfap.weight[Xj][Xi] += 1
                 return False, checks  # rlfap is inconsistent
             for Xk in rlfap.neighbors[Xi]:
                 if Xk != Xj:
@@ -129,6 +131,7 @@ def forward_checking(rlfap, var, value, assignment, removals):
                     rlfap.prune(B, b, removals)
             if not rlfap.curr_domains[B]:
                 rlfap.weight[B][var] += 1
+                rlfap.weight[var][B] += 1
                 return False
     return True
 
