@@ -1,11 +1,11 @@
 import csp
 import time
-ctr_array = dict()
+import implementation_fc_cbj as fccbj
 
 def main():
     ends = ["2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "6-w2.txt", "7-w1-f4.txt", "7-w1-f5.txt", "8-f10.txt", "8-f11.txt", "11.txt", "14-f27.txt", "14-f28.txt"]
     # ends = ["3-f10.txt", "11.txt"]
-    # ends = ["2-f24.txt"]
+    ends = ["2-f25.txt"]
     # ends= ["14-f27.txt"]
 
     print("FOR MAC:")
@@ -17,65 +17,38 @@ def main():
 
         test = Rlfap(var_path, dom_path, ctr_path)
         start_time = time.time()
-        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=mac)
+        # temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=mac)
+        test.support_pruning()
+        fccbj.fc_cbj(test, 0)
+        temp = test.assignments
         print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
+        # print(temp)
 
-    print("FOR FC:")
-    for end in ends:
-        var_path= "rlfap/var" + end
-        dom_path= "rlfap/dom" + end
-        ctr_path= "rlfap/ctr" + end
-
-
-        test = Rlfap(var_path, dom_path, ctr_path)
-        start_time = time.time()
-        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=forward_checking)
-        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
-
-    print("FOR MIN-CONF:")
-    for end in ends:
-        var_path= "rlfap/var" + end
-        dom_path= "rlfap/dom" + end
-        ctr_path= "rlfap/ctr" + end
-
-
-        test = Rlfap(var_path, dom_path, ctr_path)
-        start_time = time.time()
-        temp = csp.min_conflicts(test)
-        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
+    # print("FOR FC:")
+    # for end in ends:
+    #     var_path= "rlfap/var" + end
+    #     dom_path= "rlfap/dom" + end
+    #     ctr_path= "rlfap/ctr" + end
+    #
+    #
+    #     test = Rlfap(var_path, dom_path, ctr_path)
+    #     start_time = time.time()
+    #     temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=forward_checking)
+    #     print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
+    #
+    # print("FOR MIN-CONF:")
+    # for end in ends:
+    #     var_path= "rlfap/var" + end
+    #     dom_path= "rlfap/dom" + end
+    #     ctr_path= "rlfap/ctr" + end
+    #
+    #
+    #     test = Rlfap(var_path, dom_path, ctr_path)
+    #     start_time = time.time()
+    #     temp = csp.min_conflicts(test)
+    #     print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
 
     return
-
-
-def FC_CBJ(rlfap):
-    def main_FC_CBJ(assignment, z, conf_set):
-        def consistent(current):
-            j, a=0
-            old, dell = 0
-            for j in range(current+1, len(rlfap.variables)):
-                for a in range(0, rlfap.curr_domains[j]):
-                    if rlfap.curr_domains[j][a]:
-                        old += 1
-                        rlfap.assign(rlfap.variables[j], rlfap.curr_domains[a], assignment)
-                        # if
-
-
-        if z > len(rlfap.variables):
-            return (len(rlfap.variables), assignment)
-
-        rlfap.support_pruning()
-        for i in range(0, len(rlfap.curr_domains[z])):
-            conf_set[i] = []
-            if not rlfap.curr_domains[z][i]:
-                continue
-            rlfap.assign(rlfap.variables[z], rlfap.curr_domains[i], assignment)
-            fail = csp.consistency
-        return
-
-    conf_set = dict()
-    result = main_FC_CBJ({}, 0, conf_set)
-    assert result is None or rlfap.goal_test(result)
-    return result
 
 def dom_wdeg(assignment, rlfap):
     queue = [v for v in rlfap.variables if v not in assignment]
@@ -206,7 +179,7 @@ class Rlfap(csp.CSP):
             second_var = int(temp[1])
             k_var = int(temp[3])
 
-
+            # print(first_var, second_var)
             self.ctr_array.setdefault(first_var, {})[second_var] = (temp[2], k_var)
             self.ctr_array.setdefault(second_var, {})[first_var] = (temp[2], k_var)
             if first_var not in neighbors.keys():
@@ -223,6 +196,24 @@ class Rlfap(csp.CSP):
 
 
         csp.CSP.__init__(self, var_array, domains_array, neighbors, self.f)
+
+        self.fc_obj_domains = []
+        for i in range(0, len(self.variables)):
+            temp = []
+            for j in range(0, len(self.domains[self.variables[i]])):
+                temp.append(0)
+            self.fc_obj_domains.append(temp)
+
+        self.fc_checking = []
+        for i in range(0, len(self.variables)):
+            temp = []
+            for j in range(0, len(self.variables)):
+                temp.append(0)
+            self.fc_checking.append(temp)
+
+        self.conf_set = dict()
+
+        self.assignments = dict()
         return
 
     def f(self, A, a, B, b):

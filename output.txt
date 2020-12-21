@@ -1,0 +1,59 @@
+FOR MAC:
+2-f24.txt : True
+	run time: 0.21
+	assign count: 253
+2-f25.txt : False
+	run time: 642.34
+	assign count: 321791
+3-f10.txt : True
+	run time: 0.55
+	assign count: 424
+3-f11.txt : False
+	run time: 431.20
+	assign count: 106384
+6-w2.txt : False
+	run time: 8.46
+	assign count: 4052
+7-w1-f4.txt : True
+	run time: 0.52
+	assign count: 605
+7-w1-f5.txt : False
+	run time: 21.08
+	assign count: 15598
+8-f10.txt : True
+	run time: 76.76
+	assign count: 51680
+8-f11.txt : False
+	run time: 77.70
+	assign count: 33207
+11.txt : True
+	run time: 1562.67
+	assign count: 799347
+14-f27.txt : True
+	run time: 300.73
+	assign count: 531469
+14-f28.txt : False
+	run time: 0.96
+	assign count: 518
+FOR FC:
+2-f24.txt : True
+	run time: 0.05
+	assign count: 230
+2-f25.txt : False
+	run time: 169.30
+	assign count: 1149712
+3-f10.txt : True
+	run time: 0.28
+	assign count: 1484
+3-f11.txt : False
+	run time: 60.64
+	assign count: 358331
+6-w2.txt : False
+	run time: 5.96
+	assign count: 56739
+7-w1-f4.txt : True
+	run time: 0.66
+	assign count: 7863
+7-w1-f5.txt : False
+	run time: 8358.54
+	assign count: 81520862
