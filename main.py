@@ -1,13 +1,14 @@
 import csp
 import time
-# import implementation_fc_cbj as fccbj
-import try_two_fc_cbj as fccbj
+import random
+import backjumping as cbj
 
 def main():
     ends = ["2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "6-w2.txt", "7-w1-f4.txt", "7-w1-f5.txt", "8-f10.txt", "8-f11.txt", "11.txt", "14-f27.txt", "14-f28.txt"]
     # ends = ["3-f10.txt", "11.txt"]
-    ends = ["2-f25.txt"]
-    # ends= ["14-f27.txt"]
+    # ends = ["11.txt"]
+    # ends = ["2-f24.txt"]
+    # ends= ["6-w2.txt"]
 
     print("FOR MAC:")
     for end in ends:
@@ -15,15 +16,20 @@ def main():
         dom_path= "rlfap/dom" + end
         ctr_path= "rlfap/ctr" + end
 
-
-        test = Rlfap(var_path, dom_path, ctr_path)
-        start_time = time.time()
-        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=mac)
-        # test.support_pruning()
-        # fccbj.fc_cbj(test, 0)
-        # temp = test.assignments
-        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
-        # print(temp)
+        mo_cc = 0
+        mo_ac = 0
+        mo_rt = 0
+        for t in range(0,5):
+            test = Rlfap(var_path, dom_path, ctr_path)
+            start_time = time.time()
+            temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg,order_domain_values=csp.lcv, inference=mac)
+            mo_rt += (time.time()-start_time)
+            mo_cc += test.nconstraints
+            mo_ac += test.nassigns
+        print(end, ":", temp is not None)
+        print("\trun time mo: %f" % (mo_rt/5))
+        print("\tassign count mo: %.2f" % (mo_ac/5))
+        print("\tconstraints count mo: %.2f" % (mo_cc/5))
 
     print("FOR FC:")
     for end in ends:
@@ -31,46 +37,51 @@ def main():
         dom_path= "rlfap/dom" + end
         ctr_path= "rlfap/ctr" + end
 
-
-        test = Rlfap(var_path, dom_path, ctr_path)
-        start_time = time.time()
-        temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg, order_domain_values=csp.lcv, inference=forward_checking)
-        print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
-
-    # print("FOR MIN-CONF:")
-    # for end in ends:
-    #     var_path= "rlfap/var" + end
-    #     dom_path= "rlfap/dom" + end
-    #     ctr_path= "rlfap/ctr" + end
-    #
-    #
-    #     test = Rlfap(var_path, dom_path, ctr_path)
-    #     start_time = time.time()
-    #     temp = csp.min_conflicts(test)
-    #     print(end, ":", temp is not None, "\n\trun time: %.2f" % (time.time()-start_time), "\n\tassign count:", test.nassigns)
-
+        mo_cc = 0
+        mo_ac = 0
+        mo_rt = 0
+        for t in range(0,5):
+            test = Rlfap(var_path, dom_path, ctr_path)
+            start_time = time.time()
+            temp = csp.backtracking_search(test, select_unassigned_variable=dom_wdeg,order_domain_values=csp.lcv, inference=forward_checking)
+            mo_rt += (time.time()-start_time)
+            mo_cc += test.nconstraints
+            mo_ac += test.nassigns
+        print(end, ":", temp is not None)
+        print("\trun time mo: %f" % (mo_rt/5))
+        print("\tassign count mo: %.2f" % (mo_ac/5))
+        print("\tconstraints count mo: %.2f" % (mo_cc/5))
     return
 
 def dom_wdeg(assignment, rlfap):
     queue = [v for v in rlfap.variables if v not in assignment]
     minimum = float('+Inf')
     output = queue[0]
+    tt= []
     for x in queue:
-        flag = False
-        sum = 1
-        for y in rlfap.neighbors[x]:
-            if y not in assignment:
-                flag = True
-            sum += rlfap.weight[x][y]
-        if not flag:
-            sum = float('+Inf')
-        if rlfap.curr_domains:
-            sum = len(rlfap.curr_domains[x])/sum
-        else:
-            sum = csp.count(rlfap.nconflicts(x, val, assignment) == 0 for val in rlfap.domains[x])
-        if sum < minimum:
-            minimum = sum
-            output = x
+        temp = [v for v in rlfap.neighbors[x] if v not in assignment]
+        if temp:
+            sum = 1
+            for y in rlfap.neighbors[x]:
+                sum += rlfap.weight[x][y]
+                sum += rlfap.weight[y][x]
+            if rlfap.curr_domains:
+                t = len(rlfap.curr_domains[x])
+            else:
+                t = csp.count(rlfap.nconflicts(x, val, assignment) == 0 for val in rlfap.domains[x])
+            sum = t/(sum * len(rlfap.neighbors[x]))
+            if sum < minimum:
+                tt = []
+                tt.append(x)
+                minimum = sum
+                output = x
+            elif sum == minimum:
+                tt.append(x)
+    if tt:
+        # print(tt)
+        return random.choice(tt)
+    else:
+        return csp.argmin_random_tie(queue, key= lambda var: csp.num_legal_values(rlfap, var, assignment))
     return output
 
 def AC3(rlfap, assignment, queue=None, removals=None, arc_heuristic=csp.dom_j_up):
@@ -108,9 +119,6 @@ def revise(rlfap, Xi, Xj, removals, checks=0):
         if conflict:
             rlfap.prune(Xi, x, removals)
             revised = True
-    # if not rlfap.curr_domains[Xi]:
-    #     # print(rlfap.curr_domains[Xi])
-    #     rlfap.weight[Xi][Xj] += 1
 
 
     return revised, checks
@@ -217,9 +225,11 @@ class Rlfap(csp.CSP):
         self.conf_set = dict()
 
         self.assignments = dict()
+        self.nconstraints = 0
         return
 
     def f(self, A, a, B, b):
+        self.nconstraints += 1
         if a > b:
             func = a-b
         else:
