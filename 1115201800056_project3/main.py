@@ -1,7 +1,7 @@
 import csp
 import time
 import random
-import backjumping_finale as cbj
+import backjumping as cbj
 
 def main():
     ends = ["2-f24.txt", "2-f25.txt", "3-f10.txt", "3-f11.txt", "6-w2.txt", "7-w1-f4.txt", "7-w1-f5.txt", "8-f10.txt", "8-f11.txt", "11.txt", "14-f27.txt", "14-f28.txt"]
